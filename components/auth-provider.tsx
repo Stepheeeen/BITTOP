@@ -26,22 +26,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
+  // Pages that should NOT require authentication
+  const publicRoutes = ["/login", "/signup", "/landing"]
+
   useEffect(() => {
     const session = getSession()
     setUser(session?.user || null)
     setIsLoading(false)
 
-    // Redirect logic
-    if (!session && !pathname.startsWith("/auth") && pathname !== "/") {
+    const isPublicPage = publicRoutes.includes(pathname)
+
+    // 1. If user is NOT logged in and trying to enter a protected page → redirect to login
+    if (!session && !isPublicPage) {
       router.push("/login")
+      return
     }
 
-    if (session && pathname.startsWith("/auth")) {
-      router.push("/")
+    // 2. If user IS logged in and tries to access login or signup → redirect home
+    if (session && ["/login", "/signup"].includes(pathname)) {
+      router.push("/dashboard")
+      return
     }
   }, [router, pathname])
 
-  return <AuthContext.Provider value={{ user, isLoading, isAuthenticated: !!user }}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        isAuthenticated: !!user,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {

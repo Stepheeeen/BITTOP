@@ -12,17 +12,12 @@ export function SettingsView() {
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-md grid-cols-1">
           <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
           <ProfileSettings />
-        </TabsContent>
-
-        <TabsContent value="security">
-          <SecuritySettings />
         </TabsContent>
       </Tabs>
     </div>

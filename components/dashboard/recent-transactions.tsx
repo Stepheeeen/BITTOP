@@ -2,60 +2,51 @@
 
 import { Card } from "@/components/ui/card"
 import { ArrowUpRight, ArrowDownLeft } from "lucide-react"
+import { useEffect, useState } from "react"
+import axiosClient from "@/lib/axiosClient"
+import { getSession } from "@/lib/auth"
 
 export function RecentTransactions() {
-  const transactions = [
-    {
-      id: 1,
-      crypto: "Bitcoin",
-      symbol: "BTC",
-      amount: "0.25 BTC",
-      value: "$10,814.50",
-      type: "buy",
-      date: "Today 2:30 PM",
-    },
-    {
-      id: 2,
-      crypto: "Ethereum",
-      symbol: "ETH",
-      amount: "5 ETH",
-      value: "$10,725.00",
-      type: "buy",
-      date: "Today 1:15 PM",
-    },
-    {
-      id: 3,
-      crypto: "Solana",
-      symbol: "SOL",
-      amount: "50 SOL",
-      value: "$4,925.00",
-      type: "sell",
-      date: "Yesterday 4:45 PM",
-    },
-    {
-      id: 4,
-      crypto: "Ripple",
-      symbol: "XRP",
-      amount: "1000 XRP",
-      value: "$520.00",
-      type: "buy",
-      date: "Yesterday 10:20 AM",
-    },
-    {
-      id: 5,
-      crypto: "Bitcoin",
-      symbol: "BTC",
-      amount: "0.1 BTC",
-      value: "$4,325.80",
-      type: "sell",
-      date: "2 days ago",
-    },
-  ]
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    const session = getSession()
+    const token = session?.token
+    if (!token) return
+    setLoading(true)
+    setError("")
+    axiosClient
+      .get("/user/profile")
+      .then((res) => {
+        // Map API response to table format
+        const apiTx = res.data.transactions || []
+        const mapped = apiTx.map((tx: any, idx: number) => ({
+          id: tx._id || idx,
+          crypto: tx.coin,
+          symbol: tx.coin?.toUpperCase(),
+          amount: `${tx.amountCrypto} ${tx.coin}`,
+          value: `$${tx.amountUSD?.toLocaleString()}`,
+          type: tx.type,
+          date: new Date(tx.date).toLocaleString(),
+        }))
+        setTransactions(mapped)
+      })
+      .catch((err) => {
+        setError(err.response?.data?.error || err.message || "Failed to fetch transactions")
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
   return (
     <Card className="p-6 bg-card border-border">
       <h2 className="text-xl font-bold text-foreground mb-4">Recent Transactions</h2>
       <div className="overflow-x-auto">
+        {error && <p className="text-red-500 text-sm py-2">{error}</p>}
+        {loading ? (
+          <p className="text-gray-300 py-4 px-4">Loading transactions...</p>
+        ) : (
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
@@ -77,9 +68,9 @@ export function RecentTransactions() {
                 <td className="py-4 px-4 text-right font-medium text-foreground">{tx.value}</td>
                 <td className="py-4 px-4 text-center">
                   <span
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${tx.type === "buy" ? "bg-green-500/20 text-green-700 dark:text-green-400" : "bg-red-500/20 text-red-700 dark:text-red-400"}`}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${tx.type === "deposit" ? "bg-green-500/20 text-green-700 dark:text-green-400" : "bg-red-500/20 text-red-700 dark:text-red-400"}`}
                   >
-                    {tx.type === "buy" ? <ArrowDownLeft className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
+                    {tx.type === "deposit" ? <ArrowDownLeft className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}
                     {tx.type.toUpperCase()}
                   </span>
                 </td>
@@ -88,6 +79,7 @@ export function RecentTransactions() {
             ))}
           </tbody>
         </table>
+        )}
       </div>
     </Card>
   )

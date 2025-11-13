@@ -1,52 +1,149 @@
 "use client"
 
+import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Copy, Eye, EyeOff } from "lucide-react"
-import { useState } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog"
+import { Copy } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { supportedWallets, WalletInfo } from "@/lib/supportedWallets"
+import axiosClient from "@/lib/axiosClient"
 
 export function WalletOverview() {
-  const [showBalance, setShowBalance] = useState(true)
+  const [selectedCoin, setSelectedCoin] = useState<WalletInfo | null>(null)
+  const [isOpen, setIsOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [amount, setAmount] = useState("")
+  const [network, setNetwork] = useState("")
+
+  const handleDepositClick = (coin: WalletInfo) => {
+    setSelectedCoin(coin)
+    setNetwork(coin.network) // prefill default network
+    setIsOpen(true)
+  }
+
+  const handleCopy = async () => {
+    if (selectedCoin) {
+      await navigator.clipboard.writeText(selectedCoin.address)
+      alert("Address copied to clipboard!")
+    }
+  }
+
+  const handleConfirmDeposit = async () => {
+    if (!selectedCoin || !amount || !network) {
+      alert("Please fill in all fields before confirming.")
+      return
+    }
+
+    const payload = {
+      coin: selectedCoin.name.toLowerCase(), // lowercase matches backend
+      network,
+      address: selectedCoin.address,
+      amount: parseFloat(amount) // backend expects amount field
+    }
+
+    setLoading(true)
+    try {
+      console.log("Deposit payload:", payload) // debug
+      const res = await axiosClient.post("/deposit/initiate", payload)
+
+      if (res.status === 200) {
+        alert("Deposit submitted successfully. Await admin confirmation.")
+        setIsOpen(false)
+        setAmount("")
+      }
+    } catch (err: any) {
+      console.error(err)
+      alert(err.response?.data?.message || "Error submitting deposit.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <Card className="p-6 bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 lg:col-span-2">
-      <div className="mb-6">
-        <p className="text-muted-foreground text-sm mb-2">Total Wallet Balance</p>
-        <div className="flex items-center justify-between">
-          <h2 className="text-4xl font-bold text-foreground">{showBalance ? "$45,328.50" : "••••••••"}</h2>
-          <button
-            onClick={() => setShowBalance(!showBalance)}
-            className="p-2 hover:bg-primary/10 rounded-lg transition-colors"
-          >
-            {showBalance ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
-          </button>
-        </div>
-        <p className="text-green-600 dark:text-green-400 text-sm mt-2">+$2,145.32 (5.0%) today</p>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <label className="text-xs font-semibold text-muted-foreground mb-2 block">Wallet Address</label>
-          <div className="flex items-center gap-2 bg-card p-3 rounded-lg border border-border">
-            <input
-              type="text"
-              value="1A1z7agoat2Rt7huohN4vSQvHZ7YHE9LfE"
-              readOnly
-              className="flex-1 bg-transparent text-sm text-foreground outline-none"
-            />
-            <button className="p-2 hover:bg-primary/10 rounded-lg transition-colors">
-              <Copy className="w-4 h-4 text-primary" />
-            </button>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+      {Object.values(supportedWallets).map((coin) => (
+        <Card
+          key={coin.symbol}
+          className="p-4 flex flex-col justify-between shadow-md border border-primary/10 
+          bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+        >
+          <div>
+            <h2 className="text-lg font-semibold">{coin.name}</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{coin.network}</p>
           </div>
-        </div>
-
-        <div className="flex gap-3">
-          <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90">Deposit</Button>
-          <Button variant="outline" className="flex-1 bg-transparent">
-            Withdraw
+          <Button
+            onClick={() => handleDepositClick(coin)}
+            className="mt-4 w-full dark:bg-primary/80 dark:hover:bg-primary"
+          >
+            Deposit
           </Button>
-        </div>
-      </div>
-    </Card>
+        </Card>
+      ))}
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-md bg-white dark:bg-gray-900 dark:text-gray-100">
+          {selectedCoin && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Deposit {selectedCoin.name}</DialogTitle>
+              </DialogHeader>
+
+              <div className="flex flex-col items-center space-y-3">
+                <img
+                  src={selectedCoin.qrCode}
+                  alt={`${selectedCoin.name} QR`}
+                  className="w-32 h-32 rounded-md border dark:border-gray-700"
+                />
+
+                <div className="flex items-center justify-between w-full bg-gray-100 dark:bg-gray-800 rounded-md px-3 py-2">
+                  <span className="truncate text-sm">{selectedCoin.address}</span>
+                  <button onClick={handleCopy}>
+                    <Copy className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                  </button>
+                </div>
+
+                {/* Amount Input */}
+                <div className="w-full">
+                  <label className="text-sm text-gray-600 dark:text-gray-300">
+                    Amount (in Crypto)
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="Enter deposit amount"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="mt-1 bg-gray-50 dark:bg-gray-800 dark:border-gray-700"
+                  />
+                </div>
+
+                {/* Network Display (Read-only) */}
+                <div className="w-full">
+                  <label className="text-sm text-gray-600 dark:text-gray-300">
+                    On-chain Network
+                  </label>
+                  <div className="flex items-center justify-between w-full bg-gray-100 dark:bg-gray-800 rounded-md px-3 py-2">
+                    <span className="truncate text-sm">{network}</span>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleConfirmDeposit}
+                  className="w-full mt-2 dark:bg-green-600 dark:hover:bg-green-700"
+                  disabled={loading}
+                >
+                  {loading ? "Processing..." : "I've Paid – Confirm Deposit"}
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

@@ -11,10 +11,10 @@ interface SidebarProps {
 
 export function Sidebar({ open, onClose }: SidebarProps) {
   const links = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/market", label: "Market", icon: TrendingUp },
     { href: "/portfolio", label: "Portfolio", icon: BarChart3 },
-    { href: "/wallet", label: "Wallet", icon: Wallet },
+    { href: "/wallet", label: "Deposit", icon: Wallet },
   ]
 
   return (

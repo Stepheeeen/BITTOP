@@ -1,7 +1,9 @@
 "use client"
 
-import { Menu, Bell, Moon, Sun } from "lucide-react"
+import { Menu, Bell, Moon, Sun, User } from "lucide-react"
 import { useState, useEffect } from "react"
+import axiosClient from "@/lib/axiosClient"
+import { getSession } from "@/lib/auth"
 
 interface TopBarProps {
   onMenuClick: () => void
@@ -10,10 +12,23 @@ interface TopBarProps {
 export function TopBar({ onMenuClick }: TopBarProps) {
   const [isDark, setIsDark] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [userEmail, setUserEmail] = useState("")
 
   useEffect(() => {
     setMounted(true)
     setIsDark(document.documentElement.classList.contains("dark"))
+    // Fetch user profile for email
+    const session = getSession()
+    const token = session?.token
+    if (!token) return
+    axiosClient
+      .get("/user/profile", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        setUserEmail(res.data.email || "")
+      })
+      .catch(() => {})
   }, [])
 
   const toggleTheme = () => {
@@ -43,16 +58,12 @@ export function TopBar({ onMenuClick }: TopBarProps) {
               {isDark ? <Sun className="w-5 h-5 text-foreground" /> : <Moon className="w-5 h-5 text-foreground" />}
             </button>
           )}
-          <button className="p-2 hover:bg-muted rounded-lg transition-colors relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
-          </button>
           <div className="ml-4 flex items-center gap-3 pl-4 border-l border-border">
             <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-              <span className="text-sm font-bold text-primary">JD</span>
+              <User className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-medium text-foreground">John Doe</p>
+              <p className="text-sm font-medium text-foreground">{userEmail || "User"}</p>
               <p className="text-xs text-muted-foreground">Premium Member</p>
             </div>
           </div>

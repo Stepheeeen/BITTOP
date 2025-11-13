@@ -12,7 +12,7 @@ export default function RootPage() {
   useEffect(() => {
     if (!isLoading) {
       if (isAuthenticated) {
-        router.push("/(authenticated)")
+        router.push("/dashboard")
       } else {
         router.push("/landing")
       }

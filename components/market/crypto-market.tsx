@@ -3,67 +3,67 @@
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Search, TrendingUp, TrendingDown } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import axios from "axios"
 
 export function CryptoMarket() {
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
+  const [cryptoList, setCryptoList] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const cryptoList = [
-    {
-      symbol: "BTC",
-      name: "Bitcoin",
-      price: 43258.5,
-      change24h: 5.2,
-      volume: "$28.5B",
-      marketCap: "$840B",
-      supply: "21M",
-    },
-    {
-      symbol: "ETH",
-      name: "Ethereum",
-      price: 2145.75,
-      change24h: 3.8,
-      volume: "$12.3B",
-      marketCap: "$258B",
-      supply: "120M",
-    },
-    {
-      symbol: "BNB",
-      name: "Binance Coin",
-      price: 612.35,
-      change24h: 2.5,
-      volume: "$1.2B",
-      marketCap: "$93B",
-      supply: "152M",
-    },
-    { symbol: "SOL", name: "Solana", price: 98.5, change24h: -1.2, volume: "$2.5B", marketCap: "$41B", supply: "500M" },
-    { symbol: "XRP", name: "Ripple", price: 0.52, change24h: 2.1, volume: "$850M", marketCap: "$27B", supply: "50B" },
-    { symbol: "ADA", name: "Cardano", price: 0.92, change24h: 1.5, volume: "$500M", marketCap: "$32B", supply: "35B" },
-    {
-      symbol: "DOGE",
-      name: "Dogecoin",
-      price: 0.14,
-      change24h: 4.2,
-      volume: "$900M",
-      marketCap: "$20B",
-      supply: "142B",
-    },
-    {
-      symbol: "LINK",
-      name: "Chainlink",
-      price: 18.45,
-      change24h: -0.8,
-      volume: "$650M",
-      marketCap: "$8.5B",
-      supply: "500M",
-    },
-  ]
+  useEffect(() => {
+    const fetchMarket = async () => {
+      setLoading(true)
+      setError("")
+      try {
+        const res = await axios.get("https://api.coingecko.com/api/v3/coins/markets", {
+          params: {
+            vs_currency: "usd",
+            order: "market_cap_desc",
+            per_page: 50,
+            page: 1,
+            sparkline: true,
+          },
+          headers: { Accept: "application/json" },
+        })
+
+        // Defensive mapping to avoid undefined errors
+        const formatted = res.data.map((c: any) => ({
+          id: c.id ?? "",
+          name: c.name ?? "",
+          symbol: c.symbol?.toUpperCase() ?? "",
+          image: c.image ?? "",
+          price: c.current_price ?? 0,
+          change24h: c.price_change_percentage_24h ?? 0,
+          volume: c.total_volume ?? 0,
+          marketCap: c.market_cap ?? 0,
+          sparkline: Array.isArray(c.sparkline_in_7d?.price) ? c.sparkline_in_7d.price : [],
+        }))
+
+        setCryptoList(formatted)
+      } catch (err: any) {
+        console.error("Error fetching market data:", err)
+        setError(err.response?.data?.error || err.message || "Failed to fetch market data")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchMarket()
+  }, [])
 
   const filtered = cryptoList.filter(
     (c) =>
       c.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()),
+      c.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const handleInvest = (crypto: { symbol: string; name: string; price: number }) => {
+    router.push(`/wallet?symbol=${crypto.symbol}&name=${crypto.name}&price=${crypto.price}`)
+  }
 
   return (
     <div className="space-y-4">
@@ -79,55 +79,68 @@ export function CryptoMarket() {
         />
       </div>
 
-      {/* Market Table */}
       <Card className="bg-card border-border p-6">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-4 px-4 text-sm font-semibold text-muted-foreground">Cryptocurrency</th>
-                <th className="text-right py-4 px-4 text-sm font-semibold text-muted-foreground">Price</th>
-                <th className="text-right py-4 px-4 text-sm font-semibold text-muted-foreground">24h Change</th>
-                <th className="text-right py-4 px-4 text-sm font-semibold text-muted-foreground">Volume</th>
-                <th className="text-right py-4 px-4 text-sm font-semibold text-muted-foreground">Market Cap</th>
-                <th className="text-right py-4 px-4 text-sm font-semibold text-muted-foreground">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((crypto) => (
-                <tr key={crypto.symbol} className="border-b border-border hover:bg-muted/30 transition-colors">
-                  <td className="py-4 px-4">
-                    <div>
-                      <p className="font-semibold text-foreground">{crypto.name}</p>
-                      <p className="text-xs text-muted-foreground">{crypto.symbol}</p>
-                    </div>
-                  </td>
-                  <td className="text-right py-4 px-4 font-semibold text-foreground">
-                    ${crypto.price.toLocaleString()}
-                  </td>
-                  <td className="text-right py-4 px-4">
-                    <span
-                      className={`inline-flex items-center gap-1 ${crypto.change24h >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-                    >
-                      {crypto.change24h >= 0 ? (
-                        <TrendingUp className="w-4 h-4" />
-                      ) : (
-                        <TrendingDown className="w-4 h-4" />
-                      )}
-                      {Math.abs(crypto.change24h).toFixed(1)}%
-                    </span>
-                  </td>
-                  <td className="text-right py-4 px-4 text-muted-foreground text-sm">{crypto.volume}</td>
-                  <td className="text-right py-4 px-4 text-muted-foreground text-sm">{crypto.marketCap}</td>
-                  <td className="text-right py-4 px-4">
-                    <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                      Invest
-                    </Button>
-                  </td>
+          {error && <p className="text-red-500 text-sm py-2">{error}</p>}
+          {loading ? (
+            <p className="text-gray-300 py-4 px-4">Loading market data...</p>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-4 px-4 text-sm font-semibold text-muted-foreground">
+                    Cryptocurrency
+                  </th>
+                  <th className="text-right py-4 px-4 text-sm font-semibold text-muted-foreground">Price</th>
+                  <th className="text-right py-4 px-4 text-sm font-semibold text-muted-foreground">24h Change</th>
+                  <th className="text-right py-4 px-4 text-sm font-semibold text-muted-foreground">Volume</th>
+                  <th className="text-right py-4 px-4 text-sm font-semibold text-muted-foreground">Market Cap</th>
+                  <th className="text-right py-4 px-4 text-sm font-semibold text-muted-foreground">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((crypto) => (
+                  <tr key={crypto.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-4 flex items-center gap-3">
+                      <img src={crypto.image} alt={crypto.name} className="w-6 h-6 rounded-full" />
+                      <div>
+                        <p className="font-semibold text-foreground">{crypto.name || "N/A"}</p>
+                        <p className="text-xs text-muted-foreground">{crypto.symbol || "—"}</p>
+                      </div>
+                    </td>
+                    <td className="text-right py-4 px-4 font-semibold text-foreground">
+                      ${crypto.price?.toLocaleString() ?? "—"}
+                    </td>
+                    <td className="text-right py-4 px-4">
+                      <span
+                        className={`inline-flex items-center gap-1 ${
+                          crypto.change24h >= 0 ? "text-green-600" : "text-red-600"
+                        }`}
+                      >
+                        {crypto.change24h >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                        {Math.abs(crypto.change24h).toFixed(1)}%
+                      </span>
+                    </td>
+                    <td className="text-right py-4 px-4 text-muted-foreground text-sm">
+                      ${crypto.volume?.toLocaleString() ?? "—"}
+                    </td>
+                    <td className="text-right py-4 px-4 text-muted-foreground text-sm">
+                      ${crypto.marketCap?.toLocaleString() ?? "—"}
+                    </td>
+                    <td className="text-right py-4 px-4">
+                      <Button
+                        size="sm"
+                        className="bg-primary text-primary-foreground hover:bg-primary/90"
+                        onClick={() => handleInvest(crypto)}
+                      >
+                        Invest
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </Card>
     </div>

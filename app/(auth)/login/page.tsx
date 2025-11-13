@@ -1,12 +1,12 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { setSession, generateMockUser } from "@/lib/auth"
+import axios from "axios"
 import { Eye, EyeOff } from "lucide-react"
+import { setSession } from "@/lib/auth"
+import { API_URL } from "@/lib/constant"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -22,9 +22,6 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 800))
-
       if (!email || !password) {
         setError("Please fill in all fields")
         setLoading(false)
@@ -43,21 +40,29 @@ export default function LoginPage() {
         return
       }
 
-      // Create mock user session
-      const user = generateMockUser(email, email.split("@")[0])
-      const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      // Axios API call to login
+      const response = await axios.post(`${API_URL}/auth/login`, { email, password })
+
+      const { token, user } = response.data
+
+      // Save session in localStorage or your auth lib
       setSession(user, token)
 
       router.push("/dashboard")
-    } catch (err) {
-      setError("An error occurred. Please try again.")
+    } catch (err: any) {
+      if (err.response && err.response.data) {
+        setError(err.response.data.error || "Login failed")
+      } else {
+        setError("An error occurred. Please try again.")
+      }
+      console.error(err)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
       {/* Header */}
       <div className="text-center space-y-2">
         <div className="flex justify-center mb-4">
@@ -79,33 +84,32 @@ export default function LoginPage() {
 
         {/* Email */}
         <div className="space-y-2">
-          <label htmlFor="email" className="block text-sm font-medium text-foreground">
-            Email Address
-          </label>
+          <label htmlFor="email" className="block text-sm font-medium text-foreground">Email Address</label>
           <input
             id="email"
             type="email"
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="input-base"
+            className="w-full px-4 py-2 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 
+              text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
             disabled={loading}
           />
         </div>
 
         {/* Password */}
         <div className="space-y-2">
-          <label htmlFor="password" className="block text-sm font-medium text-foreground">
-            Password
-          </label>
+          <label htmlFor="password" className="block text-sm font-medium text-foreground">Password</label>
           <div className="relative">
             <input
               id="password"
-              type={showPassword ? "text" : "password"}
+              type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="input-base pr-10"
+              className="w-full px-4 py-2 pr-10 rounded-lg bg-white/10 backdrop-blur-sm border 
+                border-white/20 text-foreground placeholder:text-muted-foreground focus:outline-none 
+                focus:ring-2 focus:ring-primary/40"
               disabled={loading}
             />
             <button
@@ -122,9 +126,11 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2 px-4 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-2 px-4 rounded-lg bg-purple-600/80 backdrop-blur-sm 
+            text-white font-medium hover:bg-purple-600 transition-colors 
+            disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Signing in..." : "Sign In"}
+          {loading ? 'Signing in...' : 'Sign In'}
         </button>
       </form>
 
@@ -132,20 +138,9 @@ export default function LoginPage() {
       <div className="text-center space-y-2">
         <p className="text-sm text-muted-foreground">
           Don't have an account?{" "}
-          <Link href="/signup" className="text-primary hover:underline font-medium">
-            Sign up
-          </Link>
+          <Link href="/signup" className="text-primary hover:underline font-medium">Sign up</Link>
         </p>
-        <Link href="/" className="text-sm text-primary hover:underline block">
-          Back to home
-        </Link>
-      </div>
-
-      {/* Demo credentials */}
-      <div className="p-3 rounded-lg bg-muted/50 border border-muted text-xs text-muted-foreground space-y-1">
-        <p className="font-medium">Demo Credentials:</p>
-        <p>Email: demo@example.com</p>
-        <p>Password: demo123</p>
+        <Link href="/" className="text-sm text-primary hover:underline block">Back to home</Link>
       </div>
     </div>
   )
