@@ -1,15 +1,18 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { LayoutDashboard, TrendingUp, Wallet, Settings, LogOut, BarChart3 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { clearSession } from "@/lib/auth"
 
 interface SidebarProps {
   open: boolean
   onClose: () => void
 }
 
-export function Sidebar({ open, onClose }: SidebarProps) {
+export default function Sidebar({ open, onClose }: SidebarProps) {
+  const router = useRouter()
   const links = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/market", label: "Market", icon: TrendingUp },
@@ -65,7 +68,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <Settings className="w-5 h-5" />
             <span className="font-medium">Settings</span>
           </Link>
-          <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sidebar-foreground hover:bg-red-500/10 hover:text-red-500 transition-colors text-left">
+          <button
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sidebar-foreground hover:bg-red-500/10 hover:text-red-500 transition-colors text-left"
+            onClick={() => {
+              clearSession()
+              router.push("/auth/login")
+            }}
+          >
             <LogOut className="w-5 h-5" />
             <span className="font-medium">Logout</span>
           </button>

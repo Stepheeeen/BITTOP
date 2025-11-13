@@ -61,14 +61,13 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Hero Image Placeholder */}
+        {/* Hero Image */}
         <div className="relative mt-12 rounded-2xl overflow-hidden border border-border bg-muted/50">
-          <div className="aspect-video bg-gradient-to-br from-purple-500/10 to-purple-700/10 flex items-center justify-center">
-            <div className="text-center space-y-4">
-              <Coins className="w-16 h-16 mx-auto text-primary/50" />
-              <p className="text-muted-foreground">Dashboard Preview</p>
-            </div>
-          </div>
+          <img
+            src="/market.png"
+            alt="Market Preview"
+            className="w-full aspect-video object-cover"
+          />
         </div>
       </section>
 
